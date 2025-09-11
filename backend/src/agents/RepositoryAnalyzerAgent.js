@@ -23,49 +23,98 @@ class RepositoryAnalyzerAgent {
     return ChatPromptTemplate.fromMessages([
       [
         'system',
-        `You are an expert software architect and code analyst. Your job is to analyze repository structures and extract meaningful architectural insights.
+        `You are an expert software architect and code analyst specializing in deep architectural analysis. Your job is to analyze repository structures and extract comprehensive, meaningful architectural insights that reveal the true complexity and relationships within the codebase.
+
+        CRITICAL: You must respond with ONLY a valid JSON object. Do not include any markdown formatting, explanations, or additional text outside the JSON object.
 
         Analyze the provided repository structure and return a JSON object with the following structure:
         {{
-          "architecture_pattern": "pattern name (e.g., MVC, Microservices, Monolith, etc.)",
-          "tech_stack": ["technology1", "technology2", "technology3"],
+          "architecture_pattern": "detailed pattern name (e.g., Layered Monolith, Microservices, Event-Driven Architecture, etc.)",
+          "tech_stack": ["comprehensive technology list with versions where identifiable"],
           "key_components": [
             {{
-              "name": "component name",
-              "type": "component type (e.g., Frontend, Backend, Database, etc.)",
-              "technologies": ["tech1", "tech2"],
-              "description": "brief description of the component's role"
+              "name": "specific component name",
+              "type": "component type (e.g., API Layer, Business Logic, Data Access, UI Component, Service, etc.)",
+              "technologies": ["specific technologies used"],
+              "description": "detailed description of the component's role and responsibilities",
+              "files": ["key files that represent this component"],
+              "dependencies": ["other components this depends on"],
+              "interfaces": ["APIs, events, or contracts this component exposes"]
+            }}
+          ],
+          "architectural_layers": [
+            {{
+              "name": "layer name (e.g., Presentation, Business Logic, Data Access, Infrastructure)",
+              "description": "purpose and responsibilities of this layer",
+              "components": ["components that belong to this layer"],
+              "technologies": ["technologies used in this layer"],
+              "interactions": ["how this layer interacts with other layers"]
+            }}
+          ],
+          "data_flow": [
+            {{
+              "from": "source component or layer",
+              "to": "destination component or layer",
+              "type": "data flow type (e.g., HTTP API, Database Query, Event, File I/O, Message Queue)",
+              "description": "what data flows and how",
+              "protocol": "communication protocol used"
             }}
           ],
           "insights": [
-            "key architectural insight 1",
-            "key architectural insight 2",
-            "key architectural insight 3"
+            "detailed architectural insight 1",
+            "detailed architectural insight 2",
+            "detailed architectural insight 3",
+            "specific patterns and anti-patterns observed",
+            "scalability and performance considerations",
+            "maintainability and code organization observations"
           ],
           "dependencies": [
             {{
               "from": "source component",
               "to": "target component",
-              "type": "dependency type (e.g., API calls, database access, file imports)"
+              "type": "dependency type (e.g., Direct Import, API Call, Database Access, Event Subscription, File System)",
+              "strength": "strong/medium/weak",
+              "description": "detailed description of the dependency relationship"
             }}
           ],
           "file_structure_analysis": {{
-            "main_directories": ["dir1", "dir2", "dir3"],
-            "configuration_files": ["file1", "file2"],
-            "test_structure": "description of test organization",
-            "documentation_presence": "assessment of documentation quality"
+            "main_directories": ["primary directory structure with purposes"],
+            "configuration_files": ["all configuration files and their purposes"],
+            "test_structure": "detailed test organization and coverage patterns",
+            "documentation_presence": "comprehensive documentation assessment",
+            "build_system": "build tools and deployment configuration",
+            "package_management": "dependency management approach"
           }},
-          "scalability_notes": "notes about the architecture's scalability characteristics",
-          "security_considerations": "notable security patterns or concerns"
+          "scalability_notes": "detailed scalability analysis including bottlenecks and optimization opportunities",
+          "security_considerations": "comprehensive security patterns, vulnerabilities, and best practices observed",
+          "code_quality_indicators": {{
+            "modularity": "assessment of code modularity and separation of concerns",
+            "coupling": "analysis of component coupling and cohesion",
+            "reusability": "evaluation of code reusability patterns",
+            "testability": "assessment of testability and testing patterns"
+          }},
+          "recommendations": [
+            "specific architectural improvement recommendations",
+            "potential refactoring opportunities",
+            "scalability enhancement suggestions",
+            "security improvements",
+            "code quality improvements"
+          ]
         }}
 
-        Guidelines:
-        - Be thorough but concise in your analysis
-        - Focus on architectural patterns and relationships
-        - Identify the primary technologies used
-        - Note any interesting or unusual architectural decisions
-        - Consider scalability and maintainability aspects
-        - Be specific about component relationships and dependencies
+        ANALYSIS GUIDELINES:
+        - Perform DEEP architectural analysis - don't just skim the surface
+        - Identify specific architectural patterns, not just generic descriptions
+        - Map out component relationships and data flow in detail
+        - Analyze the actual file structure to understand the real architecture
+        - Look for design patterns, architectural decisions, and trade-offs
+        - Consider the evolution and maturity of the codebase
+        - Identify both strengths and potential issues in the architecture
+        - Provide actionable insights that reveal the true complexity
+        - Focus on relationships, dependencies, and interactions between components
+        - Consider performance, scalability, and maintainability implications
+
+        REMEMBER: Your response must be ONLY a valid JSON object. Start with {{ and end with }}. No markdown, no explanations, no additional text.
         `
       ],
       [
@@ -77,7 +126,8 @@ class RepositoryAnalyzerAgent {
           'File Structure:\n',
           '{repo_tree}\n',
           '\n',
-          'Please analyze this repository structure and provide detailed architectural insights.'
+          'Please analyze this repository structure and provide detailed architectural insights.\n',
+          'IMPORTANT: You must respond with ONLY a valid JSON object following the exact structure specified in the system prompt. Do not include any markdown formatting, explanations, or additional text outside the JSON object.'
         ].join('')
       ]
     ]);
@@ -104,11 +154,24 @@ class RepositoryAnalyzerAgent {
       // Parse JSON response
       let analysisData;
       try {
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        // Try to find JSON in the response
+        let jsonText = text;
+        
+        // Remove any markdown code blocks
+        jsonText = jsonText.replace(/```(?:json)?\s*([\s\S]*?)```/gi, '$1');
+        
+        // Try to find JSON object
+        const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           analysisData = JSON.parse(jsonMatch[0]);
         } else {
-          throw new Error('No JSON found in response');
+          // Try to find JSON array
+          const arrayMatch = jsonText.match(/\[[\s\S]*\]/);
+          if (arrayMatch) {
+            analysisData = JSON.parse(arrayMatch[0]);
+          } else {
+            throw new Error('No JSON found in response');
+          }
         }
       } catch (parseError) {
         console.error('❌ Repository Analyzer Agent: JSON parse error:', parseError);
@@ -139,31 +202,58 @@ class RepositoryAnalyzerAgent {
     // Create a basic analysis when JSON parsing fails
     const lines = repoTree.split('\n');
     const files = lines.filter(line => line.startsWith('- ')).map(line => line.substring(2));
+    const techStack = this.extractTechStackFromFiles(files);
     
     return {
-      architecture_pattern: "Unknown",
-      tech_stack: this.extractTechStackFromFiles(files),
+      architecture_pattern: "Unknown - Fallback Analysis",
+      tech_stack: techStack,
       key_components: [
         {
           name: "Main Application",
           type: "Application",
-          technologies: this.extractTechStackFromFiles(files),
-          description: "Main application code"
+          technologies: techStack,
+          description: "Main application code",
+          files: files.slice(0, 5),
+          dependencies: [],
+          interfaces: []
         }
       ],
+      architectural_layers: [
+        {
+          name: "Application Layer",
+          description: "Main application components",
+          components: ["Main Application"],
+          technologies: techStack,
+          interactions: ["Direct file access"]
+        }
+      ],
+      data_flow: [],
       insights: [
         "Repository structure analysis completed with fallback method",
-        "Unable to parse detailed architectural analysis"
+        "Unable to parse detailed architectural analysis",
+        "Limited analysis due to JSON parsing failure"
       ],
       dependencies: [],
       file_structure_analysis: {
         main_directories: this.extractMainDirectories(files),
         configuration_files: files.filter(f => f.includes('config') || f.includes('package') || f.includes('yarn') || f.includes('pom.xml')),
         test_structure: "Test structure not analyzed",
-        documentation_presence: "Documentation presence not analyzed"
+        documentation_presence: "Documentation presence not analyzed",
+        build_system: "Build system not analyzed",
+        package_management: "Package management not analyzed"
       },
-      scalability_notes: "Analysis incomplete",
-      security_considerations: "Security analysis incomplete"
+      scalability_notes: "Analysis incomplete - fallback method used",
+      security_considerations: "Security analysis incomplete - fallback method used",
+      code_quality_indicators: {
+        modularity: "Not analyzed",
+        coupling: "Not analyzed", 
+        reusability: "Not analyzed",
+        testability: "Not analyzed"
+      },
+      recommendations: [
+        "Enable detailed analysis by fixing JSON parsing issues",
+        "Consider manual architectural review for better insights"
+      ]
     };
   }
 

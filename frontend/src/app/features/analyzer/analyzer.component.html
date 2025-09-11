@@ -19,6 +19,10 @@
 
     <!-- Analysis Summary -->
     <div *ngIf="architecture() || techStack().length > 0 || insights().length > 0" class="analysis-summary">
+      <div *ngIf="analysisDuration() > 0" class="duration-info">
+        <span class="duration-label">Analysis completed in:</span>
+        <span class="duration-value">{{ formatDuration(analysisDuration()) }}</span>
+      </div>
       <h2>Architecture Analysis</h2>
 
       <div *ngIf="architecture()" class="summary-item">

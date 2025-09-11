@@ -27,12 +27,20 @@ export class AnalyzerComponent implements OnInit, AfterViewInit {
   insights = signal<string[]>([]);
   techStack = signal<string[]>([]);
   architecture = signal('');
+  analysisDuration = signal<number>(0);
   private mermaid = inject(MermaidService);
   private panZoom: any;
 
   private analyzerService = inject(AnalyzerService);
 
   constructor(){}
+
+  formatDuration(milliseconds: number): string {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes.toString().padStart(2, '0')}m:${seconds.toString().padStart(2, '0')}s`;
+  }
 
   ngOnInit(): void {
     // Initialize Mermaid once
@@ -187,6 +195,7 @@ export class AnalyzerComponent implements OnInit, AfterViewInit {
     this.insights.set([]);
     this.techStack.set([]);
     this.architecture.set('');
+    this.analysisDuration.set(0);
 
     const url = this.repositoryUrl;
     if (!/^https?:\/\/github\.com\//i.test(url)) {
@@ -208,6 +217,7 @@ export class AnalyzerComponent implements OnInit, AfterViewInit {
         this.insights.set(data.data?.insights || []);
         this.techStack.set(data.data?.techStack || []);
         this.architecture.set(data.data?.architecture || '');
+        this.analysisDuration.set(data.metadata?.analysisDuration || 0);
         
         // Render diagram
         setTimeout(() => {
