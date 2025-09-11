@@ -1,0 +1,37 @@
+<div class="container">
+  <h1>AI Repo Analyzer</h1>
+  <form (submit)="$event.preventDefault(); analyze()">
+    <label for="url">GitHub URL</label>
+    <input id="url" name="url" type="url" [(ngModel)]="repositoryUrl" placeholder="https://github.com/owner/repo" />
+    <button type="submit" [disabled]="loading()">{{ loading() ? 'Analyzing...' : 'Analyze' }}</button>
+  </form>
+
+  <p class="error" *ngIf="error()">{{ error() }}</p>
+
+  <!-- Loader shown when analysis is in progress -->
+  <div *ngIf="loading()" class="loader-container">
+    <div class="loader-spinner"></div>
+    <span class="loader-text">Analyzing repository, please wait...</span>
+  </div>
+
+  <!-- Results section shown when analysis is complete -->
+  <section *ngIf="!loading() && (mermaidText() || rawText())">
+    <h2 class="text-xl font-semibold mb-4">Mermaid Diagram</h2>
+    <div #mermaidContainer style="min-height: 500px; border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #fafafa; margin: 10px 0;"></div>
+
+    <details>
+      <summary>Debug Information</summary>
+      <div class="my-2">
+        <h4 class="font-semibold">Mermaid Text:</h4>
+        <pre class="bg-gray-100 p-2 rounded overflow-x-auto">{{ mermaidText() || 'No mermaid text' }}</pre>
+      </div>
+    </details>
+
+    <details>
+      <summary>Raw Model Output</summary>
+      <pre class="raw">{{ rawText() }}</pre>
+    </details>
+  </section>
+</div>
+
+

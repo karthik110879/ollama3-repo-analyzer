@@ -1,0 +1,27 @@
+{
+  "name": "ai-repo-analyzer-backend",
+  "version": "1.0.0",
+  "description": "Express.js backend for AI repository analyzer",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@langchain/community": "^0.3.55",
+    "@types/node": "^20.14.12",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "langchain": "^0.3.33",
+    "mermaid": "^11.11.0",
+    "morgan": "^1.10.0",
+    "octokit": "^5.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
