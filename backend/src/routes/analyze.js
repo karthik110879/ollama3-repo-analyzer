@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const { Octokit } = require('octokit');
-const { ChatOllama } = require('@langchain/community/chat_models/ollama');
-const { ChatPromptTemplate } = require('@langchain/core/prompts');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -10,19 +8,49 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
 
+// Import the new multi-agent system
+const AgentOrchestrator = require('../agents/AgentOrchestrator');
+
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3';
 
 const octokit = new Octokit({
   auth: GITHUB_TOKEN || undefined,
   userAgent: 'ai-repo-analyzer',
 });
 
-const chat = new ChatOllama({
-  baseUrl: OLLAMA_BASE_URL,
-  model: OLLAMA_MODEL,
-  temperature: 0.2,
+// Initialize the multi-agent orchestrator with chunking support
+const agentOrchestrator = new AgentOrchestrator({
+  analyzerConfig: {
+    baseUrl: OLLAMA_BASE_URL,
+    model: process.env.OLLAMA_ANALYZER_MODEL || process.env.OLLAMA_MODEL || 'llama3',
+    temperature: parseFloat(process.env.OLLAMA_ANALYZER_TEMPERATURE) || 0.1
+  },
+  diagramBuilderConfig: {
+    baseUrl: OLLAMA_BASE_URL,
+    model: process.env.OLLAMA_DIAGRAM_MODEL || process.env.OLLAMA_MODEL || 'llama3',
+    temperature: parseFloat(process.env.OLLAMA_DIAGRAM_TEMPERATURE) || 0.3
+  },
+  chunkingConfig: {
+    baseUrl: OLLAMA_BASE_URL,
+    model: process.env.OLLAMA_CHUNKING_MODEL || process.env.OLLAMA_MODEL || 'llama3',
+    temperature: parseFloat(process.env.OLLAMA_CHUNKING_TEMPERATURE) || 0.1,
+    maxChunkSize: parseInt(process.env.MAX_CHUNK_SIZE) || 200,
+    maxChunks: parseInt(process.env.MAX_CHUNKS) || 10,
+    minChunkSize: parseInt(process.env.MIN_CHUNK_SIZE) || 50
+  },
+  parallelConfig: {
+    maxConcurrentChunks: parseInt(process.env.MAX_CONCURRENT_CHUNKS) || 3,
+    chunkTimeout: parseInt(process.env.CHUNK_TIMEOUT) || 120000,
+    retryAttempts: parseInt(process.env.RETRY_ATTEMPTS) || 2
+  },
+  aggregatorConfig: {
+    baseUrl: OLLAMA_BASE_URL,
+    model: process.env.OLLAMA_AGGREGATOR_MODEL || process.env.OLLAMA_MODEL || 'llama3',
+    temperature: parseFloat(process.env.OLLAMA_AGGREGATOR_TEMPERATURE) || 0.2
+  },
+  chunkingThreshold: parseInt(process.env.CHUNKING_THRESHOLD) || 500,
+  enableChunking: process.env.ENABLE_CHUNKING !== 'false'
 });
 
 function parseGithubUrl(repositoryUrl) {
@@ -56,75 +84,7 @@ function formatTreeListing(owner, repo, defaultBranch, tree) {
   return lines.join('\n');
 }
 
-const prompt = ChatPromptTemplate.fromMessages([
-  [
-    'system',
-    `You are an expert software architect analyzing codebases.
-
-    Analyze the repository structure and create a meaningful architectural diagram.
-
-    Respond with a JSON object containing:
-    {
-      "mermaid": "graph TD\\n[your diagram here]",
-      "insights": ["key insight 1", "key insight 2"],
-      "tech_stack": ["technology 1", "technology 2"],
-      "architecture": "pattern name"
-    }
-
-    Mermaid diagram requirements:
-    - Start with "graph TD"
-    - Use clear node labels like "Frontend: React", "Backend: Express", "Database: MongoDB"
-    - Show relationships with arrows: A --> B
-    - Use different shapes: [rectangles], (cylinders), {diamonds}, ((circles))
-    - Keep it simple and focused on main components
-    - Maximum 15-20 nodes for clarity
-
-    Example:
-    graph TD
-      A[Frontend: React App] --> B[Backend: Express API]
-      B --> C[(Database: MongoDB)]
-      A --> D[Utils: Helpers]
-
-    Make the diagram clean, readable, and architecturally meaningful.
-    `,
-  ],
-  [
-    'human',
-    [
-      'Repository structure:\n',
-      '{repo_tree}\n',
-      '\nCreate an architectural diagram for this codebase.'
-    ].join(''),
-  ],
-]);
-
-
-// const prompt = ChatPromptTemplate.fromMessages([
-//    [
-//     'system',
-//     `You are a senior software architect.
-//       Infer a high-level architecture from the provided repository file list.
-
-//       Return JSON ONLY, structured as:
-//       {{
-//         "mermaid": "graph TD ...",
-//         "insights": ["...", "..."]
-//       }}
-
-//       - The "mermaid" field must contain only a valid Mermaid diagram which can be directly renderd in the UI.
-//       - The "insights" field must be a list of short bullet points.`,
-//   ],
-//   [
-//     'human',
-//     [
-//       'Here is the repository file listing:\n',
-//       '---\n',
-//       '{repo_tree}\n',
-//       '---\n',
-//       'Generate the JSON response now.'
-//     ].join(''),
-//   ],
-// ]);
+// Old prompt system removed - now using multi-agent system
 
 async function getDefaultBranch(owner, repo) {
   const { data } = await octokit.rest.repos.get({ owner, repo });
@@ -205,57 +165,39 @@ router.post('/', async (req, res) => {
       listing = formatTreeListing(parsed.owner, parsed.repo, defaultBranch, tree);
     }
 
-    const chain = prompt.pipe(chat);
-    // Build values dynamically to avoid "Missing value for input variable" errors
-    const values = { repo_tree: listing };
-    try {
-      const inputVars = (prompt && Array.isArray(prompt.inputVariables)) ? prompt.inputVariables : [];
-      for (const name of inputVars) {
-        if (values[name] === undefined) {
-          // Provide safe defaults for any extra variables referenced in the prompt
-          values[name] = '';
-        }
-      }
-    } catch {}
-    const result = await chain.invoke(values);
+    // Use the new multi-agent system
+    const repositoryData = {
+      repoName: `${parsed.owner}/${parsed.repo}`,
+      branchName: defaultBranch,
+      repoTree: listing
+    };
 
-   const text = (result && result.content) ? String(result.content).trim() : '';
+    const analysisResult = await agentOrchestrator.analyzeRepository(repositoryData);
 
-    // Extract mermaid diagram and additional data
-    let mermaid = '';
-    let insights = [];
-    let techStack = [];
-    let architecture = '';
-    let raw = text;
-
-    const mermaidMatch = text.match(/```(?:mermaid)?\s*([\s\S]*?)```/i);
-    if (mermaidMatch) {
-      mermaid = cleanMermaid(mermaidMatch[1].trim());
-    } else {
-      // Try to parse JSON response
-      try {
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          mermaid = cleanMermaid(parsed.mermaid || '');
-          insights = parsed.insights || [];
-          techStack = parsed.tech_stack || [];
-          architecture = parsed.architecture || '';
-        }
-      } catch (e) {
-        console.log('JSON parse failed, using raw text');
-      }
+    if (!analysisResult.success) {
+      return res.status(500).json({
+        success: false,
+        error: 'Analysis failed',
+        message: analysisResult.message || 'Unknown error occurred'
+      });
     }
 
+    // Return the structured response from the multi-agent system
     res.json({
       success: true,
       data: {
-        mermaid,
-        raw,
-        insights,
-        techStack,
-        architecture
-      }
+        mermaid: analysisResult.data.mermaid || '',
+        raw: analysisResult.data.raw || {},
+        insights: analysisResult.data.insights || [],
+        techStack: analysisResult.data.techStack || [],
+        architecture: analysisResult.data.architecture || '',
+        keyComponents: analysisResult.data.keyComponents || [],
+        dependencies: analysisResult.data.dependencies || [],
+        fileStructureAnalysis: analysisResult.data.fileStructureAnalysis || {},
+        scalabilityNotes: analysisResult.data.scalabilityNotes || '',
+        securityConsiderations: analysisResult.data.securityConsiderations || ''
+      },
+      metadata: analysisResult.metadata || {}
     });
 
   } catch (error) {
@@ -270,21 +212,7 @@ router.post('/', async (req, res) => {
 });
 
 
-function cleanMermaid(diagram) {
-  if (!diagram) return '';
-
-  return diagram
-    // remove "graph TD;" and replace with "graph TD\n"
-    .replace(/graph TD;/g, 'graph TD\n')
-    .replace(/graph TD\s+/g, 'graph TD\n')
-    // fix arrows like "-- >" into "-->"
-    .replace(/--\s*>/g, '-->')
-    // fix labels "|text|Node" into "|text| Node"
-    .replace(/\|([^\|]+)\|([A-Za-z0-9\[])/g, '|$1| $2')
-    // ensure each statement is on a new line
-    .replace(/;\s*/g, ';\n')
-    .trim();
-}
+// cleanMermaid function removed - now handled by MermaidDiagramBuilderAgent
 
 module.exports = router;
 
