@@ -16,7 +16,32 @@
 
   <!-- Results section shown when analysis is complete -->
   <section *ngIf="!loading() && (mermaidText() || rawText())">
-    <h2 class="text-xl font-semibold mb-4">Mermaid Diagram</h2>
+    
+    <!-- Analysis Summary -->
+    <div *ngIf="architecture() || techStack().length > 0 || insights().length > 0" class="analysis-summary">
+      <h2>Architecture Analysis</h2>
+      
+      <div *ngIf="architecture()" class="summary-item">
+        <strong>Architecture Pattern:</strong> {{ architecture() }}
+      </div>
+      
+      <div *ngIf="techStack().length > 0" class="summary-item">
+        <strong>Technology Stack:</strong>
+        <div class="tech-tags">
+          <span *ngFor="let tech of techStack()" class="tech-tag">{{ tech }}</span>
+        </div>
+      </div>
+      
+      <div *ngIf="insights().length > 0" class="summary-item">
+        <strong>Key Insights:</strong>
+        <ul class="insights-list">
+          <li *ngFor="let insight of insights()">{{ insight }}</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Mermaid Diagram -->
+    <h2 class="text-xl font-semibold mb-4">Architecture Diagram</h2>
     <div #mermaidContainer style="min-height: 500px; border: 1px solid #ddd; border-radius: 8px; padding: 20px; background: #fafafa; margin: 10px 0;"></div>
 
     <details>

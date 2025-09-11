@@ -40,6 +40,55 @@ details {
   margin-top: 1rem;
 }
 
+// Analysis Summary Styling
+.analysis-summary {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.analysis-summary h2 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1.25rem;
+}
+
+.summary-item {
+  margin-bottom: 1rem;
+}
+
+.summary-item:last-child {
+  margin-bottom: 0;
+}
+
+.tech-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.tech-tag {
+  background: #007bff;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 15px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.insights-list {
+  margin: 0.5rem 0 0 0;
+  padding-left: 1.5rem;
+}
+
+.insights-list li {
+  margin-bottom: 0.25rem;
+  color: #495057;
+}
+
 // Loader styles
 .loader-container {
   display: flex;

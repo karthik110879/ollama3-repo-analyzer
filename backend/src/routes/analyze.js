@@ -59,41 +59,41 @@ function formatTreeListing(owner, repo, defaultBranch, tree) {
 const prompt = ChatPromptTemplate.fromMessages([
   [
     'system',
-    `You are a senior software architect.
+    `You are an expert software architect analyzing codebases.
 
-    Your task is to analyze a given codebase's repository file structure and infer a high-level architecture overview.
+    Analyze the repository structure and create a meaningful architectural diagram.
 
-    Respond ONLY in valid JSON format with the following structure:
+    Respond with a JSON object containing:
     {
-      "mermaid": "graph TD\\n...diagram here...",
-      "insights": ["Insight 1", "Insight 2", "..."]
+      "mermaid": "graph TD\\n[your diagram here]",
+      "insights": ["key insight 1", "key insight 2"],
+      "tech_stack": ["technology 1", "technology 2"],
+      "architecture": "pattern name"
     }
 
-    Requirements for "mermaid":
-    - Must start with "graph TD".
-    - Render a complete architectural overview using Mermaid syntax.
-    - Use proper arrows to show dependencies and relationships (e.g., A --> B).
-    - All nodes (modules/files/folders) should be connected meaningfully — no isolated nodes unless justified.
-    - Represent folder hierarchies and key files inside them.
-    - Focus on key architectural components like services, controllers, utils, configs, etc.
+    Mermaid diagram requirements:
+    - Start with "graph TD"
+    - Use clear node labels like "Frontend: React", "Backend: Express", "Database: MongoDB"
+    - Show relationships with arrows: A --> B
+    - Use different shapes: [rectangles], (cylinders), {diamonds}, ((circles))
+    - Keep it simple and focused on main components
+    - Maximum 15-20 nodes for clarity
 
-    Constraints:
-    - The diagram must be valid Mermaid syntax and renderable without errors.
-    - Escape newlines as \\n in the JSON string.
-    - No extra commentary — only the JSON object.
+    Example:
+    graph TD
+      A[Frontend: React App] --> B[Backend: Express API]
+      B --> C[(Database: MongoDB)]
+      A --> D[Utils: Helpers]
 
-    The "insights" field:
-    - List concise architectural insights (e.g., presence of MVC pattern, microservices, deeply nested modules, etc).
+    Make the diagram clean, readable, and architecturally meaningful.
     `,
   ],
   [
     'human',
     [
-      'Here is the repository file listing:\n',
-      '---\n',
+      'Repository structure:\n',
       '{repo_tree}\n',
-      '---\n',
-      'Generate the JSON response now.'
+      '\nCreate an architectural diagram for this codebase.'
     ].join(''),
   ],
 ]);
@@ -221,26 +221,29 @@ router.post('/', async (req, res) => {
 
    const text = (result && result.content) ? String(result.content).trim() : '';
 
-    // Try to extract the mermaid diagram using regex
+    // Extract mermaid diagram and additional data
     let mermaid = '';
+    let insights = [];
+    let techStack = [];
+    let architecture = '';
     let raw = text;
+
     const mermaidMatch = text.match(/```(?:mermaid)?\s*([\s\S]*?)```/i);
     if (mermaidMatch) {
       mermaid = cleanMermaid(mermaidMatch[1].trim());
     } else {
-      // Fallback: try to parse JSON and extract mermaid property
+      // Try to parse JSON response
       try {
-        // Extract JSON block from text, even if pretty-printed and with leading text
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          const jsonStr = jsonMatch[0];
-          const parsed = JSON.parse(jsonStr);
-          if (parsed.mermaid) {
-            mermaid = cleanMermaid(parsed.mermaid.trim());
-          }
+          const parsed = JSON.parse(jsonMatch[0]);
+          mermaid = cleanMermaid(parsed.mermaid || '');
+          insights = parsed.insights || [];
+          techStack = parsed.tech_stack || [];
+          architecture = parsed.architecture || '';
         }
       } catch (e) {
-        // ignore JSON parse errors
+        console.log('JSON parse failed, using raw text');
       }
     }
 
@@ -248,7 +251,10 @@ router.post('/', async (req, res) => {
       success: true,
       data: {
         mermaid,
-        raw
+        raw,
+        insights,
+        techStack,
+        architecture
       }
     });
 

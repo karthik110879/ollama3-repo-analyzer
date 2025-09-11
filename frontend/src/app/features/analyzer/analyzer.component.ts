@@ -24,6 +24,9 @@ export class AnalyzerComponent implements OnInit, AfterViewInit {
   error = signal('');
   mermaidText = signal('');
   rawText = signal('');
+  insights = signal<string[]>([]);
+  techStack = signal<string[]>([]);
+  architecture = signal('');
   private mermaid = inject(MermaidService);
   private panZoom: any;
 
@@ -181,6 +184,9 @@ export class AnalyzerComponent implements OnInit, AfterViewInit {
     this.error.set('');
     this.mermaidText.set('');
     this.rawText.set('');
+    this.insights.set([]);
+    this.techStack.set([]);
+    this.architecture.set('');
 
     const url = this.repositoryUrl;
     if (!/^https?:\/\/github\.com\//i.test(url)) {
@@ -195,15 +201,15 @@ export class AnalyzerComponent implements OnInit, AfterViewInit {
         if (!data?.success) {
           throw new Error(data?.message || data?.error || 'Request failed');
         }
-        // Set both mermaid and raw text from the response
-        const mermaidData = data.data?.mermaid || '';
-        const rawData = data.data?.raw || '';
-        console.log('Mermaid data:', mermaidData);
-        console.log('Raw data:', rawData);
-
-        this.mermaidText.set(mermaidData);
-        this.rawText.set(rawData);
-        // Always call renderDiagram after setting mermaidText
+        
+        // Set all data from the response
+        this.mermaidText.set(data.data?.mermaid || '');
+        this.rawText.set(data.data?.raw || '');
+        this.insights.set(data.data?.insights || []);
+        this.techStack.set(data.data?.techStack || []);
+        this.architecture.set(data.data?.architecture || '');
+        
+        // Render diagram
         setTimeout(() => {
           void this.renderDiagram();
         }, 100);
