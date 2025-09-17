@@ -6,7 +6,12 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "setup-models": "node scripts/setup-models.js",
+    "setup-models-quick": "node scripts/setup-models.js --quick",
+    "test-models": "node scripts/setup-models.js",
+    "test-codellama": "node test-codellama-integration.js",
+    "test-config": "node test-config.js"
   },
   "dependencies": {
     "@langchain/community": "^0.3.55",

@@ -1,14 +1,22 @@
 const { ChatOllama } = require('@langchain/community/chat_models/ollama');
 const { ChatPromptTemplate } = require('@langchain/core/prompts');
+const { getModelConfig } = require('../config/modelConfig');
 
 class RepositoryAnalyzerAgent {
   constructor(config = {}) {
+    // Get model configuration from environment variables
+    const modelConfig = getModelConfig('analyzer');
+    
     this.config = {
-      baseUrl: config.baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-      model: config.model || process.env.OLLAMA_ANALYZER_MODEL || 'llama3',
-      temperature: config.temperature || 0.1, // Low temperature for consistent analysis
+      baseUrl: config.baseUrl || modelConfig.baseUrl,
+      model: config.model || modelConfig.model,
+      temperature: config.temperature || modelConfig.temperature,
       ...config
     };
+
+    console.log(`🔧 Repository Analyzer Agent: Using model ${this.config.model}`);
+    console.log(`📊 Purpose: ${modelConfig.purpose}`);
+    console.log(`📝 Description: ${modelConfig.description}`);
 
     this.chat = new ChatOllama({
       baseUrl: this.config.baseUrl,

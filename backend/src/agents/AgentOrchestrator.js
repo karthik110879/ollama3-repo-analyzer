@@ -327,29 +327,39 @@ class AgentOrchestrator {
       analyzerAgent: {
         model: this.analyzerAgent.config.model,
         temperature: this.analyzerAgent.config.temperature,
-        baseUrl: this.analyzerAgent.config.baseUrl
+        baseUrl: this.analyzerAgent.config.baseUrl,
+        purpose: 'Code Analysis (CodeLlama 34B)',
+        description: 'Specialized for deep architectural analysis and code understanding'
       },
       diagramBuilderAgent: {
         model: this.diagramBuilderAgent.config.model,
         temperature: this.diagramBuilderAgent.config.temperature,
-        baseUrl: this.diagramBuilderAgent.config.baseUrl
+        baseUrl: this.diagramBuilderAgent.config.baseUrl,
+        purpose: 'Diagram Generation (Ollama3)',
+        description: 'Creative Mermaid diagram generation'
       },
       chunkingAgent: {
         model: this.chunkingAgent.config.model,
         temperature: this.chunkingAgent.config.temperature,
         baseUrl: this.chunkingAgent.config.baseUrl,
         maxChunkSize: this.chunkingAgent.config.maxChunkSize,
-        maxChunks: this.chunkingAgent.config.maxChunks
+        maxChunks: this.chunkingAgent.config.maxChunks,
+        purpose: 'Repository Chunking (Ollama3)',
+        description: 'Large repository chunking and processing'
       },
       parallelCoordinator: {
         maxConcurrentChunks: this.parallelCoordinator.config.maxConcurrentChunks,
         chunkTimeout: this.parallelCoordinator.config.chunkTimeout,
-        retryAttempts: this.parallelCoordinator.config.retryAttempts
+        retryAttempts: this.parallelCoordinator.config.retryAttempts,
+        purpose: 'Parallel Processing Coordinator',
+        description: 'Manages parallel chunk processing'
       },
       resultsAggregator: {
         model: this.resultsAggregator.config.model,
         temperature: this.resultsAggregator.config.temperature,
-        baseUrl: this.resultsAggregator.config.baseUrl
+        baseUrl: this.resultsAggregator.config.baseUrl,
+        purpose: 'Results Aggregation (Ollama3)',
+        description: 'Combines and synthesizes chunk results'
       }
     };
   }
